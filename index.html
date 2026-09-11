@@ -390,64 +390,71 @@ let debts = JSON.parse(localStorage.getItem("ledgerDebts") || "[]");
 let payments = JSON.parse(localStorage.getItem("ledgerPayments") || "[]");
 let editingId = null;
 
-const money = n =>
-  new Intl.NumberFormat("en-US",{
-    style:"currency",
-    currency:"USD",
-    maximumFractionDigits:0
-  }).format(n || 0);
+const $ = id => document.getElementById(id);
 
-function save(){
-  localStorage.setItem("ledgerDebts",JSON.stringify(debts));
-  localStorage.setItem("ledgerPayments",JSON.stringify(payments));
+const money = n =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0
+  }).format(Number(n) || 0);
+
+function save() {
+  localStorage.setItem("ledgerDebts", JSON.stringify(debts));
+  localStorage.setItem("ledgerPayments", JSON.stringify(payments));
 }
 
-function openDebt(id=null){
-  editingId=id;
-  document.getElementById("debtModal").classList.add("open");
+function openDebt(id = null) {
+  editingId = id;
+  $("debtModal").classList.add("open");
 
-  if(id){
-    const d=debts.find(x=>x.id===id);
-    document.getElementById("debtModalTitle").textContent="Edit debt";
-    name.value=d.name;
-    type.value=d.type;
-    frequency.value=d.frequency;
-    balance.value=d.balance;
-    original.value=d.original;
-    apr.value=d.apr;
-    minimum.value=d.minimum;
-    due.value=d.due;
-    limit.value=d.limit || 0;
-  }else{
-    document.getElementById("debtModalTitle").textContent="Add a debt";
-    document.getElementById("debtForm").reset();
+  if (id) {
+    const d = debts.find(x => x.id === id);
+    if (!d) return;
+
+    $("debtModalTitle").textContent = "Edit debt";
+    $("name").value = d.name;
+    $("type").value = d.type;
+    $("frequency").value = d.frequency;
+    $("balance").value = d.balance;
+    $("original").value = d.original;
+    $("apr").value = d.apr;
+    $("minimum").value = d.minimum;
+    $("due").value = d.due || "";
+    $("limit").value = d.limit || 0;
+  } else {
+    $("debtModalTitle").textContent = "Add a debt";
+    $("debtForm").reset();
+    $("apr").value = 0;
+    $("minimum").value = 0;
+    $("limit").value = 0;
   }
 }
 
-function closeDebt(){
-  document.getElementById("debtModal").classList.remove("open");
-  editingId=null;
+function closeDebt() {
+  $("debtModal").classList.remove("open");
+  editingId = null;
 }
 
-document.getElementById("debtForm").addEventListener("submit",e=>{
+$("debtForm").addEventListener("submit", function(e) {
   e.preventDefault();
 
-  const data={
-    id:editingId || Date.now(),
-    name:name.value.trim(),
-    type:type.value,
-    frequency:frequency.value,
-    balance:Number(balance.value),
-    original:Number(original.value),
-    apr:Number(apr.value),
-    minimum:Number(minimum.value),
-    due:due.value,
-    limit:Number(limit.value)
+  const data = {
+    id: editingId || Date.now(),
+    name: $("name").value.trim(),
+    type: $("type").value,
+    frequency: $("frequency").value,
+    balance: Number($("balance").value) || 0,
+    original: Number($("original").value) || 0,
+    apr: Number($("apr").value) || 0,
+    minimum: Number($("minimum").value) || 0,
+    due: $("due").value,
+    limit: Number($("limit").value) || 0
   };
 
-  if(editingId){
-    debts=debts.map(d=>d.id===editingId?data:d);
-  }else{
+  if (editingId) {
+    debts = debts.map(d => d.id === editingId ? data : d);
+  } else {
     debts.push(data);
   }
 
@@ -456,118 +463,127 @@ document.getElementById("debtForm").addEventListener("submit",e=>{
   render();
 });
 
-function deleteDebt(id){
-  if(confirm("Delete this debt?")){
-    debts=debts.filter(d=>d.id!==id);
+function deleteDebt(id) {
+  if (confirm("Delete this debt?")) {
+    debts = debts.filter(d => d.id !== id);
+    payments = payments.filter(p => p.debtId !== id);
     save();
     render();
   }
 }
 
-function openPayment(){
-  if(!debts.length){
+function openPayment() {
+  if (!debts.length) {
     alert("Add a debt first.");
     return;
   }
 
-  paymentAccount.innerHTML=debts.map(d=>
+  $("paymentAccount").innerHTML = debts.map(d =>
     `<option value="${d.id}">${escapeHTML(d.name)}</option>`
   ).join("");
 
-  paymentDate.value=new Date().toISOString().split("T")[0];
-  document.getElementById("paymentModal").classList.add("open");
+  $("paymentDate").value = new Date().toISOString().split("T")[0];
+  $("paymentAmount").value = "";
+  $("paymentModal").classList.add("open");
 }
 
-function closePayment(){
-  document.getElementById("paymentModal").classList.remove("open");
+function closePayment() {
+  $("paymentModal").classList.remove("open");
 }
 
-document.getElementById("paymentForm").addEventListener("submit",e=>{
+$("paymentForm").addEventListener("submit", function(e) {
   e.preventDefault();
 
-  const id=Number(paymentAccount.value);
-  const amount=Number(paymentAmount.value);
-  const d=debts.find(x=>x.id===id);
+  const id = Number($("paymentAccount").value);
+  const amount = Number($("paymentAmount").value);
+  const date = $("paymentDate").value;
+  const d = debts.find(x => x.id === id);
 
-  if(!d || amount<=0)return;
+  if (!d || amount <= 0) return;
 
-  d.balance=Math.max(0,d.balance-amount);
+  d.balance = Math.max(0, d.balance - amount);
 
   payments.push({
-    id:Date.now(),
-    debtId:id,
-    amount,
-    date:paymentDate.value
+    id: Date.now(),
+    debtId: id,
+    amount: amount,
+    date: date
   });
 
   save();
-  paymentForm.reset();
   closePayment();
   render();
 });
 
-function calculateMonthly(d){
-  if(d.frequency==="Biweekly") return d.minimum*26/12;
-  if(d.frequency==="Weekly") return d.minimum*52/12;
+function calculateMonthly(d) {
+  if (d.frequency === "Biweekly") return d.minimum * 26 / 12;
+  if (d.frequency === "Weekly") return d.minimum * 52 / 12;
   return d.minimum;
 }
 
-function estimatePayoff(){
-  let months=0;
+function estimatePayoff() {
+  let months = 0;
 
-  for(const d of debts){
-    if(d.balance<=0)continue;
+  for (const d of debts) {
+    if (d.balance <= 0) continue;
 
-    let balance=d.balance;
-    let payment=calculateMonthly(d);
-    let rate=(d.apr/100)/12;
+    let balance = d.balance;
+    const payment = calculateMonthly(d);
+    const rate = (d.apr / 100) / 12;
 
-    if(payment<=balance*rate || payment<=0)return null;
+    if (payment <= 0) return null;
 
-    let m=0;
+    let m = 0;
 
-    while(balance>0 && m<1200){
-      balance=balance + balance*rate - payment;
+    while (balance > 0 && m < 1200) {
+      balance = balance + balance * rate - payment;
       m++;
+
+      if (balance < 0) balance = 0;
     }
 
-    months=Math.max(months,m);
+    if (balance > 0) return null;
+    months = Math.max(months, m);
   }
 
-  if(!months)return null;
+  if (!months) return null;
 
-  const date=new Date();
-  date.setMonth(date.getMonth()+months);
+  const date = new Date();
+  date.setMonth(date.getMonth() + months);
 
-  return date.toLocaleDateString("en-US",{
-    month:"short",
-    year:"numeric"
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric"
   });
 }
 
-function render(){
+function render() {
+  const total = debts.reduce((s, d) => s + d.balance, 0);
+  const original = debts.reduce((s, d) => s + d.original, 0);
+  const paid = Math.max(0, original - total);
 
-  const total=debts.reduce((s,d)=>s+d.balance,0);
-  const original=debts.reduce((s,d)=>s+d.original,0);
-  const paid=Math.max(0,original-total);
+  const monthly = debts.reduce((s, d) => s + calculateMonthly(d), 0);
+  const biweekly = monthly * 12 / 26;
 
-  const monthly=debts.reduce((s,d)=>s+calculateMonthly(d),0);
-  const biweekly=monthly*12/26;
+  const pct = original
+    ? Math.min(100, (paid / original) * 100)
+    : 0;
 
-  const pct=original ? Math.min(100,(paid/original)*100) : 0;
+  $("totalDebt").textContent = money(total);
+  $("accountCount").textContent =
+    `${debts.length} account${debts.length === 1 ? "" : "s"}`;
 
-  totalDebt.textContent=money(total);
-  accountCount.textContent=`${debts.length} account${debts.length===1?"":"s"}`;
-  monthlyPayments.textContent=money(monthly);
-  biweeklyPayments.textContent=`≈ ${money(biweekly)} biweekly`;
-  progressPercent.textContent=pct.toFixed(1)+"%";
-  payoffDate.textContent=estimatePayoff() || "—";
+  $("monthlyPayments").textContent = money(monthly);
+  $("biweeklyPayments").textContent = `≈ ${money(biweekly)} biweekly`;
 
-  progressBar.style.width=pct+"%";
-  paidAmount.textContent=money(paid)+" paid";
-  originalAmount.textContent=money(original)+" original";
+  $("progressPercent").textContent = pct.toFixed(1) + "%";
+  $("payoffDate").textContent = estimatePayoff() || "—";
 
-  progressText.textContent=debts.length
+  $("progressBar").style.width = pct + "%";
+  $("paidAmount").textContent = money(paid) + " paid";
+  $("originalAmount").textContent = money(original) + " original";
+
+  $("progressText").textContent = debts.length
     ? `${money(paid)} paid toward ${money(original)} in original balances.`
     : "Add your debts to begin tracking.";
 
@@ -575,12 +591,11 @@ function render(){
   renderUpcoming();
 }
 
-function renderAccounts(){
+function renderAccounts() {
+  const box = $("accounts");
 
-  const box=document.getElementById("accounts");
-
-  if(!debts.length){
-    box.innerHTML=`
+  if (!debts.length) {
+    box.innerHTML = `
       <div class="empty">
         <div style="font-size:40px;margin-bottom:12px">＋</div>
         <div style="font-size:20px;color:var(--text);margin-bottom:8px">
@@ -591,20 +606,20 @@ function renderAccounts(){
     return;
   }
 
-  box.innerHTML=debts.map(d=>{
-
-    const paid=d.original
-      ? Math.max(0,Math.min(100,(1-d.balance/d.original)*100))
+  box.innerHTML = debts.map(d => {
+    const paid = d.original
+      ? Math.max(0, Math.min(100, (1 - d.balance / d.original) * 100))
       : 0;
 
-    let utilization="";
-    if(d.type==="Credit Card" && d.limit>0){
-      utilization=` • ${((d.balance/d.limit)*100).toFixed(1)}% utilization`;
+    let utilization = "";
+
+    if (d.type === "Credit Card" && d.limit > 0) {
+      utilization =
+        ` • ${((d.balance / d.limit) * 100).toFixed(1)}% utilization`;
     }
 
     return `
       <div class="account">
-
         <div class="account-top">
           <div>
             <div class="account-name">${escapeHTML(d.name)}</div>
@@ -621,39 +636,41 @@ function renderAccounts(){
         </div>
 
         <div class="meta">
-          ${paid.toFixed(1)}% paid • ${money(d.minimum)} ${d.frequency.toLowerCase()}
+          ${paid.toFixed(1)}% paid • ${money(d.minimum)}
+          ${d.frequency.toLowerCase()}
         </div>
 
         <div class="account-buttons">
           <button onclick="openDebt(${d.id})">Edit</button>
           <button onclick="deleteDebt(${d.id})">Delete</button>
         </div>
-
       </div>`;
   }).join("");
 }
 
-function renderUpcoming(){
+function renderUpcoming() {
+  const box = $("upcoming");
 
-  const box=document.getElementById("upcoming");
+  const upcoming = debts
+    .filter(d => d.due)
+    .sort((a, b) => new Date(a.due) - new Date(b.due))
+    .slice(0, 5);
 
-  const upcoming=debts
-    .filter(d=>d.due)
-    .sort((a,b)=>new Date(a.due)-new Date(b.due))
-    .slice(0,5);
-
-  if(!upcoming.length){
-    box.innerHTML=`<div class="empty">No upcoming payment dates entered.</div>`;
+  if (!upcoming.length) {
+    box.innerHTML =
+      `<div class="empty">No upcoming payment dates entered.</div>`;
     return;
   }
 
-  box.innerHTML=upcoming.map(d=>`
+  box.innerHTML = upcoming.map(d => `
     <div class="payment">
       <div>
         <strong>${escapeHTML(d.name)}</strong>
         <div class="meta">
-          ${new Date(d.due+"T12:00:00").toLocaleDateString("en-US",{
-            month:"short",day:"numeric",year:"numeric"
+          ${new Date(d.due + "T12:00:00").toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric"
           })}
         </div>
       </div>
@@ -662,21 +679,20 @@ function renderUpcoming(){
   `).join("");
 }
 
-function escapeHTML(str){
+function escapeHTML(str) {
   return String(str)
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
-function toggleTheme(){
+function toggleTheme() {
   document.body.classList.toggle("light");
 }
 
 render();
-
 </script>
 
 </body>
