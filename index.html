@@ -532,29 +532,7 @@ $("debtForm").addEventListener("submit", function(e) {
 
   save();
   closeDebt();
-  });
-
-  function showSection(section) {
-  const dashboard = document.getElementById("dashboardSection");
-  const debtsSection = document.getElementById("debtsSection");
-
-  dashboard.style.display = section === "dashboard" ? "block" : "none";
-  debtsSection.style.display = section === "debts" ? "block" : "none";
-
-  document.querySelectorAll(".nav-button").forEach(button => {
-    button.classList.remove("active");
-  });
-
-  const activeButton = [...document.querySelectorAll(".nav-button")]
-    .find(button => button.textContent.trim().toLowerCase() ===
-      (section === "payoff" ? "payoff plan" : section));
-
-  if (activeButton) {
-    activeButton.classList.add("active");
-  }
-}
-
-render();
+  render();
 });
 
 function deleteDebt(id) {
