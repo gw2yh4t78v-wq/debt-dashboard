@@ -1,1 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledger — Debt Dashboard</title>
 
+<style>
+:root{
+  --bg:#071013;
+  --card:#111b1e;
+  --card2:#172326;
+  --text:#f2f5f4;
+  --muted:#9aa8a8;
+  --line:#263437;
+  --accent:#49c7a5;
+  --accent-dark:#123e35;
+  --danger:#ef7272;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+header{
+  height:92px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 32px;
+}
+.logo{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.logo-icon{
+  width:58px;height:58px;border-radius:50%;
+  background:var(--accent);
+  display:grid;place-items:center;
+  font-size:28px;color:#06211b;
+}
+.logo-title{font-size:26px;font-weight:700}
+.logo-sub{font-size:17px;color:var(--muted)}
+main{max-width:1200px;margin:auto;padding:42px 24px}
+.top{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:38px;
+}
+h1{font-size:40px;margin:0 0 8px}
+.subtitle{color:var(--muted);font-size:20px}
+button{
+  border:1px solid var(--line);
+  background:var(--card);
+  color:var(--text);
+  padding:13px 20px;
+  border-radius:14px;
+  font-size:16px;
+  cursor:pointer;
+}
+button:hover{filter:brightness(1.15)}
+.primary{
+  background:var(--accent);
+  color:#06211b;
+  border:none;
+  font-weight:700;
+}
+.actions{display:flex;gap:12px}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:18px;
+}
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:24px;
+  padding:28px;
+}
+.card.highlight{background:var(--accent);color:#06211b}
+.label{font-size:18px;color:var(--muted);margin-bottom:22px}
+.highlight .label{color:#123c34}
+.big{font-size:42px;font-weight:700}
+.small{margin-top:10px;color:var(--muted)}
+.highlight .small{color:#17493f}
+.section{
+  margin-top:24px;
+}
+.section-title{
+  font-size:25px;font-weight:700;margin-bottom:18px;
+}
+.progress{
+  height:14px;background:#1f2c2f;border-radius:99px;overflow:hidden;
+}
+.progress > div{
+  height:100%;background:var(--accent);border-radius:99px;
+}
+.accounts{display:flex;flex-direction:column;gap:12px}
+.account{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:20px;
+}
+.account-top{
+  display:flex;justify-content:space-between;gap:20px;
+}
+.account-name{font-size:20px;font-weight:650}
+.balance{font-size:22px;font-weight:700}
+.meta{color:var(--muted);margin:7px 0 14px}
+.account-buttons{display:flex;gap:8px;margin-top:14px}
+.account-buttons button{padding:8px 12px;font-size:14px}
+.empty{
+  text-align:center;padding:48px 20px;
+  color:var(--muted);
+  background:var(--card);
+  border:1px dashed var(--line);
+  border-radius:20px;
+}
+.payments{
+  display:flex;flex-direction:column;gap:8px;
+}
+.payment{
+  display:flex;justify-content:space-between;
+  padding:15px 0;border-bottom:1px solid var(--line);
+}
+.payment:last-child{border-bottom:0}
+.modal{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.72);
+  display:none;align-items:center;justify-content:center;
+  padding:20px;z-index:10;
+}
+.modal.open{display:flex}
+.modal-box{
+  width:min(700px,100%);
+  max-height:90vh;overflow:auto;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:24px;
+  padding:28px;
+}
+.modal-head{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:24px;
+}
+.modal-head h2{margin:0;font-size:28px}
+.close{font-size:25px;background:transparent;border:0}
+.form-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;
+}
+.field{display:flex;flex-direction:column;gap:7px}
+.field.full{grid-column:1/-1}
+label{font-size:14px;color:var(--muted)}
+input,select{
+  width:100%;padding:13px 14px;
+  background:var(--card2);
+  color:var(--text);
+  border:1px solid var(--line);
+  border-radius:12px;
+  font-size:16px;
+}
+.form-actions{
+  display:flex;justify-content:flex-end;gap:10px;margin-top:24px;
+}
+.notice{
+  padding:14px 16px;border-radius:12px;
+  background:var(--accent-dark);
+  color:#bcebdd;margin-bottom:18px;
+}
+@media(max-width:700px){
+  header{padding:0 18px}
+  main{padding:28px 15px}
+  .top{align-items:flex-start;gap:20px;flex-direction:column}
+  .grid{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
+  .field.full{grid-column:auto}
+  h1{font-size:32px}
+  .big{font-size:34px}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🐷</div>
+    <div>
+      <div class="logo-title">Ledger</div>
+      <div class="logo-sub">Debt Dashboard</div>
+    </div>
+  </div>
+  <button onclick="toggleTheme()">☾</button>
+</header>
+
+<main>
+
+  <div class="top">
+    <div>
+      <h1>Dashboard</h1>
+      <div class="subtitle">Your personal debt overview</div>
+    </div>
+
+    <div class="actions">
+      <button onclick="openPayment()">Record payment</button>
+      <button class="primary" onclick="openDebt()">＋ Add debt</button>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <div class="card highlight">
+      <div class="label">Total outstanding debt</div>
+      <div class="big" id="totalDebt">$0</div>
+      <div class="small" id="accountCount">0 accounts</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Monthly payments</div>
+      <div class="big" id="monthlyPayments">$0</div>
+      <div class="small" id="biweeklyPayments">≈ $0 biweekly</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Overall payoff progress</div>
+      <div class="big" id="progressPercent">0%</div>
+      <div class="small">of original balances paid</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Debt-free date</div>
+      <div class="big" id="payoffDate">—</div>
+      <div class="small">based on current payments</div>
+    </div>
+
+  </div>
+
+  <div class="section card">
+    <div class="section-title">Debt-Free Progress</div>
+    <div class="subtitle" id="progressText">Add your debts to begin tracking.</div>
+    <br>
+    <div class="progress">
+      <div id="progressBar" style="width:0%"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:14px;color:var(--muted)">
+      <span id="paidAmount">$0 paid</span>
+      <span id="originalAmount">$0 original</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Accounts</div>
+    <div id="accounts" class="accounts"></div>
+  </div>
+
+  <div class="section card">
+    <div class="section-title">Upcoming Payments</div>
+    <div id="upcoming" class="payments"></div>
+  </div>
+
+</main>
+
+<!-- DEBT MODAL -->
+<div class="modal" id="debtModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 id="debtModalTitle">Add a debt</h2>
+      <button class="close" onclick="closeDebt()">×</button>
+    </div>
+
+    <div class="notice">
+      Enter your own information. Ledger will not invent account details.
+    </div>
+
+    <form id="debtForm">
+
+      <div class="form-grid">
+
+        <div class="field full">
+          <label>Account name</label>
+          <input id="name" required placeholder="e.g. Credit Card">
+        </div>
+
+        <div class="field">
+          <label>Debt type</label>
+          <select id="type">
+            <option>Credit Card</option>
+            <option>Personal Loan</option>
+            <option>Auto Loan</option>
+            <option>Mortgage</option>
+            <option>Other</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Payment frequency</label>
+          <select id="frequency">
+            <option>Monthly</option>
+            <option>Biweekly</option>
+            <option>Weekly</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Current balance</label>
+          <input id="balance" type="number" min="0" step="0.01" required>
+        </div>
+
+        <div class="field">
+          <label>Original balance</label>
+          <input id="original" type="number" min="0" step="0.01" required>
+        </div>
+
+        <div class="field">
+          <label>APR (%)</label>
+          <input id="apr" type="number" min="0" step="0.01" value="0">
+        </div>
+
+        <div class="field">
+          <label>Minimum payment</label>
+          <input id="minimum" type="number" min="0" step="0.01" value="0">
+        </div>
+
+        <div class="field">
+          <label>Next payment date</label>
+          <input id="due" type="date">
+        </div>
+
+        <div class="field">
+          <label>Credit limit (credit cards)</label>
+          <input id="limit" type="number" min="0" step="0.01" value="0">
+        </div>
+
+      </div>
+
+      <div class="form-actions">
+        <button type="button" onclick="closeDebt()">Cancel</button>
+        <button class="primary" type="submit">Save debt</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="modal" id="paymentModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Record a payment</h2>
+      <button class="close" onclick="closePayment()">×</button>
+    </div>
+
+    <form id="paymentForm">
+
+      <div class="form-grid">
+
+        <div class="field full">
+          <label>Account</label>
+          <select id="paymentAccount"></select>
+        </div>
+
+        <div class="field">
+          <label>Payment amount</label>
+          <input id="paymentAmount" type="number" min="0" step="0.01" required>
+        </div>
+
+        <div class="field">
+          <label>Payment date</label>
+          <input id="paymentDate" type="date" required>
+        </div>
+
+      </div>
+
+      <div class="form-actions">
+        <button type="button" onclick="closePayment()">Cancel</button>
+        <button class="primary" type="submit">Record payment</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<script>
+
+let debts = JSON.parse(localStorage.getItem("ledgerDebts") || "[]");
+let payments = JSON.parse(localStorage.getItem("ledgerPayments") || "[]");
+let editingId = null;
+
+const money = n =>
+  new Intl.NumberFormat("en-US",{
+    style:"currency",
+    currency:"USD",
+    maximumFractionDigits:0
+  }).format(n || 0);
+
+function save(){
+  localStorage.setItem("ledgerDebts",JSON.stringify(debts));
+  localStorage.setItem("ledgerPayments",JSON.stringify(payments));
+}
+
+function openDebt(id=null){
+  editingId=id;
+  document.getElementById("debtModal").classList.add("open");
+
+  if(id){
+    const d=debts.find(x=>x.id===id);
+    document.getElementById("debtModalTitle").textContent="Edit debt";
+    name.value=d.name;
+    type.value=d.type;
+    frequency.value=d.frequency;
+    balance.value=d.balance;
+    original.value=d.original;
+    apr.value=d.apr;
+    minimum.value=d.minimum;
+    due.value=d.due;
+    limit.value=d.limit || 0;
+  }else{
+    document.getElementById("debtModalTitle").textContent="Add a debt";
+    document.getElementById("debtForm").reset();
+  }
+}
+
+function closeDebt(){
+  document.getElementById("debtModal").classList.remove("open");
+  editingId=null;
+}
+
+document.getElementById("debtForm").addEventListener("submit",e=>{
+  e.preventDefault();
+
+  const data={
+    id:editingId || Date.now(),
+    name:name.value.trim(),
+    type:type.value,
+    frequency:frequency.value,
+    balance:Number(balance.value),
+    original:Number(original.value),
+    apr:Number(apr.value),
+    minimum:Number(minimum.value),
+    due:due.value,
+    limit:Number(limit.value)
+  };
+
+  if(editingId){
+    debts=debts.map(d=>d.id===editingId?data:d);
+  }else{
+    debts.push(data);
+  }
+
+  save();
+  closeDebt();
+  render();
+});
+
+function deleteDebt(id){
+  if(confirm("Delete this debt?")){
+    debts=debts.filter(d=>d.id!==id);
+    save();
+    render();
+  }
+}
+
+function openPayment(){
+  if(!debts.length){
+    alert("Add a debt first.");
+    return;
+  }
+
+  paymentAccount.innerHTML=debts.map(d=>
+    `<option value="${d.id}">${escapeHTML(d.name)}</option>`
+  ).join("");
+
+  paymentDate.value=new Date().toISOString().split("T")[0];
+  document.getElementById("paymentModal").classList.add("open");
+}
+
+function closePayment(){
+  document.getElementById("paymentModal").classList.remove("open");
+}
+
+document.getElementById("paymentForm").addEventListener("submit",e=>{
+  e.preventDefault();
+
+  const id=Number(paymentAccount.value);
+  const amount=Number(paymentAmount.value);
+  const d=debts.find(x=>x.id===id);
+
+  if(!d || amount<=0)return;
+
+  d.balance=Math.max(0,d.balance-amount);
+
+  payments.push({
+    id:Date.now(),
+    debtId:id,
+    amount,
+    date:paymentDate.value
+  });
+
+  save();
+  paymentForm.reset();
+  closePayment();
+  render();
+});
+
+function calculateMonthly(d){
+  if(d.frequency==="Biweekly") return d.minimum*26/12;
+  if(d.frequency==="Weekly") return d.minimum*52/12;
+  return d.minimum;
+}
+
+function estimatePayoff(){
+  let months=0;
+
+  for(const d of debts){
+    if(d.balance<=0)continue;
+
+    let balance=d.balance;
+    let payment=calculateMonthly(d);
+    let rate=(d.apr/100)/12;
+
+    if(payment<=balance*rate || payment<=0)return null;
+
+    let m=0;
+
+    while(balance>0 && m<1200){
+      balance=balance + balance*rate - payment;
+      m++;
+    }
+
+    months=Math.max(months,m);
+  }
+
+  if(!months)return null;
+
+  const date=new Date();
+  date.setMonth(date.getMonth()+months);
+
+  return date.toLocaleDateString("en-US",{
+    month:"short",
+    year:"numeric"
+  });
+}
+
+function render(){
+
+  const total=debts.reduce((s,d)=>s+d.balance,0);
+  const original=debts.reduce((s,d)=>s+d.original,0);
+  const paid=Math.max(0,original-total);
+
+  const monthly=debts.reduce((s,d)=>s+calculateMonthly(d),0);
+  const biweekly=monthly*12/26;
+
+  const pct=original ? Math.min(100,(paid/original)*100) : 0;
+
+  totalDebt.textContent=money(total);
+  accountCount.textContent=`${debts.length} account${debts.length===1?"":"s"}`;
+  monthlyPayments.textContent=money(monthly);
+  biweeklyPayments.textContent=`≈ ${money(biweekly)} biweekly`;
+  progressPercent.textContent=pct.toFixed(1)+"%";
+  payoffDate.textContent=estimatePayoff() || "—";
+
+  progressBar.style.width=pct+"%";
+  paidAmount.textContent=money(paid)+" paid";
+  originalAmount.textContent=money(original)+" original";
+
+  progressText.textContent=debts.length
+    ? `${money(paid)} paid toward ${money(original)} in original balances.`
+    : "Add your debts to begin tracking.";
+
+  renderAccounts();
+  renderUpcoming();
+}
+
+function renderAccounts(){
+
+  const box=document.getElementById("accounts");
+
+  if(!debts.length){
+    box.innerHTML=`
+      <div class="empty">
+        <div style="font-size:40px;margin-bottom:12px">＋</div>
+        <div style="font-size:20px;color:var(--text);margin-bottom:8px">
+          No debts added yet
+        </div>
+        <div>Add your first debt to start building your dashboard.</div>
+      </div>`;
+    return;
+  }
+
+  box.innerHTML=debts.map(d=>{
+
+    const paid=d.original
+      ? Math.max(0,Math.min(100,(1-d.balance/d.original)*100))
+      : 0;
+
+    let utilization="";
+    if(d.type==="Credit Card" && d.limit>0){
+      utilization=` • ${((d.balance/d.limit)*100).toFixed(1)}% utilization`;
+    }
+
+    return `
+      <div class="account">
+
+        <div class="account-top">
+          <div>
+            <div class="account-name">${escapeHTML(d.name)}</div>
+            <div class="meta">
+              ${escapeHTML(d.type)} • ${d.apr.toFixed(2)}% APR${utilization}
+            </div>
+          </div>
+
+          <div class="balance">${money(d.balance)}</div>
+        </div>
+
+        <div class="progress">
+          <div style="width:${paid}%"></div>
+        </div>
+
+        <div class="meta">
+          ${paid.toFixed(1)}% paid • ${money(d.minimum)} ${d.frequency.toLowerCase()}
+        </div>
+
+        <div class="account-buttons">
+          <button onclick="openDebt(${d.id})">Edit</button>
+          <button onclick="deleteDebt(${d.id})">Delete</button>
+        </div>
+
+      </div>`;
+  }).join("");
+}
+
+function renderUpcoming(){
+
+  const box=document.getElementById("upcoming");
+
+  const upcoming=debts
+    .filter(d=>d.due)
+    .sort((a,b)=>new Date(a.due)-new Date(b.due))
+    .slice(0,5);
+
+  if(!upcoming.length){
+    box.innerHTML=`<div class="empty">No upcoming payment dates entered.</div>`;
+    return;
+  }
+
+  box.innerHTML=upcoming.map(d=>`
+    <div class="payment">
+      <div>
+        <strong>${escapeHTML(d.name)}</strong>
+        <div class="meta">
+          ${new Date(d.due+"T12:00:00").toLocaleDateString("en-US",{
+            month:"short",day:"numeric",year:"numeric"
+          })}
+        </div>
+      </div>
+      <strong>${money(d.minimum)}</strong>
+    </div>
+  `).join("");
+}
+
+function escapeHTML(str){
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function toggleTheme(){
+  document.body.classList.toggle("light");
+}
+
+render();
+
+</script>
+
+</body>
+</html>
