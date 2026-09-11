@@ -171,6 +171,35 @@ input,select{
   background:var(--accent-dark);
   color:#bcebdd;margin-bottom:18px;
 }
+  .nav{
+  display:flex;
+  gap:8px;
+  padding:14px 24px;
+  border-bottom:1px solid var(--line);
+  background:var(--bg);
+  overflow-x:auto;
+}
+
+.nav-button{
+  background:transparent;
+  border:1px solid transparent;
+  color:var(--muted);
+  padding:10px 16px;
+  border-radius:12px;
+  white-space:nowrap;
+}
+
+.nav-button:hover{
+  background:var(--card);
+  color:var(--text);
+}
+
+.nav-button.active{
+  background:var(--accent-dark);
+  color:var(--accent);
+  border-color:var(--accent);
+}
+
 @media(max-width:700px){
   header{padding:0 18px}
   main{padding:28px 15px}
@@ -197,7 +226,16 @@ input,select{
   <button onclick="toggleTheme()">☾</button>
 </header>
 
-<main>
+<nav class="nav">
+  <button class="nav-button active" onclick="showSection('dashboard')">Dashboard</button>
+  <button class="nav-button" onclick="showSection('debts')">Debts</button>
+  <button class="nav-button" onclick="showSection('payments')">Payments</button>
+  <button class="nav-button" onclick="showSection('goals')">Goals</button>
+  <button class="nav-button" onclick="showSection('payoff')">Payoff Plan</button>
+  <button class="nav-button" onclick="showSection('settings')">Settings</button>
+</nav>
+
+<main id="dashboardSection">
 
   <div class="top">
     <div>
@@ -264,6 +302,40 @@ input,select{
 
 </main>
 
+  <section id="debtsSection" style="display:none">
+
+  <div class="top">
+    <div>
+      <h1>Debts</h1>
+      <div class="subtitle">Manage and track all of your debt accounts</div>
+    </div>
+
+    <button class="primary" onclick="openDebt()">＋ Add debt</button>
+  </div>
+
+  <div class="grid">
+
+    <div class="card">
+      <div class="label">Total debt</div>
+      <div class="big" id="debtsTotal">$0</div>
+      <div class="small">Current outstanding balance</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Monthly payments</div>
+      <div class="big" id="debtsMonthly">$0</div>
+      <div class="small">Based on your entered payment amounts</div>
+    </div>
+
+  </div>
+
+  <div class="section">
+    <div class="section-title">Your Accounts</div>
+    <div id="debtsList" class="accounts"></div>
+  </div>
+
+</section>
+  
 <!-- DEBT MODAL -->
 <div class="modal" id="debtModal">
   <div class="modal-box">
@@ -460,7 +532,27 @@ $("debtForm").addEventListener("submit", function(e) {
 
   save();
   closeDebt();
-  render();
+  function showSection(section) {
+  const dashboard = document.getElementById("dashboardSection");
+  const debtsSection = document.getElementById("debtsSection");
+
+  dashboard.style.display = section === "dashboard" ? "block" : "none";
+  debtsSection.style.display = section === "debts" ? "block" : "none";
+
+  document.querySelectorAll(".nav-button").forEach(button => {
+    button.classList.remove("active");
+  });
+
+  const activeButton = [...document.querySelectorAll(".nav-button")]
+    .find(button => button.textContent.trim().toLowerCase() ===
+      (section === "payoff" ? "payoff plan" : section));
+
+  if (activeButton) {
+    activeButton.classList.add("active");
+  }
+}
+
+render();
 });
 
 function deleteDebt(id) {
@@ -589,13 +681,23 @@ function render() {
 
   renderAccounts();
   renderUpcoming();
+    if (typeof debtsList !== "undefined") {
+    $("debtsTotal").textContent = money(
+      debts.reduce((sum, d) => sum + d.balance, 0)
+    );
+
+    $("debtsMonthly").textContent = money(
+      debts.reduce((sum, d) => sum + calculateMonthly(d), 0)
+    );
+  }
 }
 
 function renderAccounts() {
   const box = $("accounts");
+  const debtsList = $("debtsList");
 
   if (!debts.length) {
-    box.innerHTML = `
+    const emptyHTML = `
       <div class="empty">
         <div style="font-size:40px;margin-bottom:12px">＋</div>
         <div style="font-size:20px;color:var(--text);margin-bottom:8px">
@@ -603,10 +705,26 @@ function renderAccounts() {
         </div>
         <div>Add your first debt to start building your dashboard.</div>
       </div>`;
+
+    box.innerHTML = emptyHTML;
+    debtsList.innerHTML = emptyHTML;
+
+    $("debtsTotal").textContent = "$0";
+    $("debtsMonthly").textContent = "$0";
+
     return;
   }
 
-  box.innerHTML = debts.map(d => {
+  const total = debts.reduce((sum, d) => sum + d.balance, 0);
+  const monthly = debts.reduce(
+    (sum, d) => sum + calculateMonthly(d),
+    0
+  );
+
+  $("debtsTotal").textContent = money(total);
+  $("debtsMonthly").textContent = money(monthly);
+
+  const accountHTML = debts.map(d => {
     const paid = d.original
       ? Math.max(0, Math.min(100, (1 - d.balance / d.original) * 100))
       : 0;
@@ -646,9 +764,11 @@ function renderAccounts() {
         </div>
       </div>`;
   }).join("");
-}
 
-function renderUpcoming() {
+  box.innerHTML = accountHTML;
+  debtsList.innerHTML = accountHTML;
+}
+  function renderUpcoming() {
   const box = $("upcoming");
 
   const upcoming = debts
