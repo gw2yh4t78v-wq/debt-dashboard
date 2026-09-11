@@ -196,10 +196,25 @@ const money = n => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD
 const money2 = n => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:2}).format(Number(n)||0);
 const today = () => new Date().toISOString().slice(0,10);
 
-let debts = JSON.parse(localStorage.getItem("ledgerDebts") || "[]");
+const startingDebts = [
+  {id:1001,name:"Prime Visa",type:"Credit Card",frequency:"Monthly",balance:91.97,original:91.97,apr:25,minimum:35,due:"2026-10-06",limit:0,note:"$4 pending credit was previously noted."},
+  {id:1002,name:"Citi",type:"Credit Card",frequency:"Monthly",balance:1681.47,original:1681.47,apr:0,minimum:0,due:"2026-09-23",limit:0,note:"0% balance transfer through June 1, 2027."},
+  {id:1003,name:"Apple Card",type:"Credit Card",frequency:"Monthly",balance:706.62,original:706.62,apr:19.49,minimum:0,due:"",limit:0,note:"$580 additional payment was previously noted as needed by Sept. 30."},
+  {id:1004,name:"CareCredit",type:"Credit Card",frequency:"Biweekly",balance:482.65,original:482.65,apr:0,minimum:105,due:"",limit:0,note:"0% promotion; promotional end date previously noted as Sept. 2, 2027."},
+  {id:1005,name:"Southwest Card",type:"Credit Card",frequency:"Monthly",balance:341.50,original:341.50,apr:0,minimum:0,due:"",limit:0,note:"$99 pending credit was previously noted."},
+  {id:1006,name:"Bob's Furniture",type:"Other",frequency:"Biweekly",balance:910.16,original:910.16,apr:0,minimum:76,due:"2026-09-18",limit:0,note:"User's payoff goal is $76 every two weeks starting Sept. 18."},
+  {id:1007,name:"SoFi Personal Loan",type:"Personal Loan",frequency:"Biweekly",balance:10583.21,original:10583.21,apr:5.32,minimum:181,due:"",limit:0,note:"$181 biweekly payment."},
+  {id:1008,name:"Chase Auto Loan",type:"Auto Loan",frequency:"Biweekly",balance:26995.81,original:26995.81,apr:6.99,minimum:288.14,due:"",limit:0,note:"$288.14 biweekly payment."},
+  {id:1009,name:"Rocket Mortgage",type:"Mortgage",frequency:"Biweekly",balance:160950.06,original:160950.06,apr:4.625,minimum:728.25,due:"",limit:0,note:"$728.25 biweekly payment."}
+];
+
+const storedDebts = localStorage.getItem("ledgerDebts");
+const parsedDebts = storedDebts ? JSON.parse(storedDebts) : [];
+let debts = parsedDebts.length ? parsedDebts : startingDebts;
 let payments = JSON.parse(localStorage.getItem("ledgerPayments") || "[]");
 let goals = JSON.parse(localStorage.getItem("ledgerGoals") || "[]");
 let settings = JSON.parse(localStorage.getItem("ledgerSettings") || '{"extraBudget":0,"theme":"dark"}');
+if (!parsedDebts.length) localStorage.setItem("ledgerDebts", JSON.stringify(debts));
 let editingId = null;
 
 function save(){
