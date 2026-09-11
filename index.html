@@ -540,7 +540,39 @@ function deleteDebt(id) {
     debts = debts.filter(d => d.id !== id);
     payments = payments.filter(p => p.debtId !== id);
     save();
-    render();
+    function showSection(section) {
+  const dashboard = document.getElementById("dashboardSection");
+  const debtsSection = document.getElementById("debtsSection");
+
+  if (section === "dashboard") {
+    dashboard.style.display = "block";
+    debtsSection.style.display = "none";
+  }
+
+  if (section === "debts") {
+    dashboard.style.display = "none";
+    debtsSection.style.display = "block";
+  }
+
+  document.querySelectorAll(".nav-button").forEach(button => {
+    button.classList.remove("active");
+  });
+
+  const buttons = document.querySelectorAll(".nav-button");
+
+  buttons.forEach(button => {
+    const text = button.textContent.trim().toLowerCase();
+
+    if (
+      (section === "dashboard" && text === "dashboard") ||
+      (section === "debts" && text === "debts")
+    ) {
+      button.classList.add("active");
+    }
+  });
+}
+
+render();
   }
 }
 
