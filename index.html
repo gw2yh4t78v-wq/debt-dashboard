@@ -399,4 +399,263 @@ document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if
 setTheme();render();
 </script>
 </body>
-</html>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+(() => {
+  const SUPABASE_URL = "https://dveepxcwzhrwopwloivu.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_svCcxfq74lRhadzCvyMx6w_omnoHXRW";
+
+  const cloud = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+  let cloudReady = false;
+  let currentUser = null;
+  let saveTimer = null;
+
+  const originalSave = save;
+
+  function showLogin() {
+    if (document.getElementById("ledgerCloudLogin")) return;
+
+    const box = document.createElement("div");
+    box.id = "ledgerCloudLogin";
+
+    box.innerHTML = `
+      <div style="
+        position:fixed;
+        inset:0;
+        background:rgba(0,0,0,.82);
+        z-index:99999;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:20px;
+      ">
+        <div style="
+          width:100%;
+          max-width:420px;
+          background:#111b1e;
+          border:1px solid #263437;
+          border-radius:20px;
+          padding:28px;
+          box-shadow:0 18px 45px rgba(0,0,0,.35);
+          font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+        ">
+          <div style="font-size:28px;font-weight:700;margin-bottom:8px;">
+            Ledger
+          </div>
+
+          <div style="font-size:22px;font-weight:600;margin-bottom:10px;">
+            Secure Cloud Sync
+          </div>
+
+          <div style="color:#aebcbe;line-height:1.5;margin-bottom:20px;">
+            Sign in to keep your debts, payments, goals, and settings
+            synchronized between Safari and your Home Screen app.
+          </div>
+
+          <input
+            id="ledgerEmail"
+            type="email"
+            placeholder="Your email address"
+            autocomplete="email"
+            style="
+              width:100%;
+              padding:14px;
+              border-radius:10px;
+              border:1px solid #263437;
+              background:#071013;
+              color:white;
+              margin-bottom:12px;
+              font-size:16px;
+            "
+          >
+
+          <button
+            id="ledgerSignIn"
+            style="
+              width:100%;
+              padding:14px;
+              border:0;
+              border-radius:10px;
+              background:#49c7a5;
+              color:#071013;
+              font-weight:700;
+              font-size:16px;
+            "
+          >
+            Email Me a Sign-In Link
+          </button>
+
+          <div
+            id="ledgerLoginStatus"
+            style="
+              margin-top:16px;
+              color:#aebcbe;
+              text-align:center;
+              line-height:1.4;
+            "
+          ></div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(box);
+
+    document
+      .getElementById("ledgerSignIn")
+      .addEventListener("click", async () => {
+        const email = document
+          .getElementById("ledgerEmail")
+          .value
+          .trim();
+
+        const status = document.getElementById("ledgerLoginStatus");
+
+        if (!email) {
+          status.textContent = "Please enter your email address.";
+          return;
+        }
+
+        status.textContent = "Sending your sign-in link...";
+
+        const redirectUrl =
+          window.location.origin + window.location.pathname;
+
+        const { error } = await cloud.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: redirectUrl
+          }
+        });
+
+        if (error) {
+          status.textContent =
+            "There was a problem: " + error.message;
+          return;
+        }
+
+        status.textContent =
+          "Check your email. Tap the sign-in link to return to Ledger.";
+      });
+  }
+
+  async function loadCloudData() {
+    if (!currentUser) return;
+
+    const { data, error } = await cloud
+      .from("ledger_data")
+      .select("data")
+      .eq("user_id", currentUser.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Ledger cloud load error:", error);
+      return;
+    }
+
+    if (data && data.data) {
+      const cloudData = data.data;
+
+      if (Array.isArray(cloudData.debts)) {
+        debts = cloudData.debts;
+      }
+
+      if (Array.isArray(cloudData.payments)) {
+        payments = cloudData.payments;
+      }
+
+      if (Array.isArray(cloudData.goals)) {
+        goals = cloudData.goals;
+      }
+
+      if (cloudData.settings) {
+        settings = cloudData.settings;
+      }
+
+      originalSave();
+      setTheme();
+      render();
+
+      console.log("Ledger: cloud data loaded.");
+    } else {
+      await saveCloudData();
+      console.log("Ledger: first cloud backup created.");
+    }
+
+    cloudReady = true;
+
+    const loginBox = document.getElementById("ledgerCloudLogin");
+    if (loginBox) loginBox.remove();
+  }
+
+  async function saveCloudData() {
+    if (!currentUser) return;
+
+    const payload = {
+      debts,
+      payments,
+      goals,
+      settings
+    };
+
+    const { error } = await cloud
+      .from("ledger_data")
+      .upsert({
+        user_id: currentUser.id,
+        data: payload,
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) {
+      console.error("Ledger cloud save error:", error);
+    } else {
+      console.log("Ledger: cloud data saved.");
+    }
+  }
+
+  save = function() {
+    originalSave();
+
+    if (!cloudReady || !currentUser) return;
+
+    clearTimeout(saveTimer);
+
+    saveTimer = setTimeout(() => {
+      saveCloudData();
+    }, 250);
+  };
+
+  async function initializeCloud() {
+    showLogin();
+
+    const {
+      data: { session }
+    } = await cloud.auth.getSession();
+
+    if (session) {
+      currentUser = session.user;
+      await loadCloudData();
+    }
+  }
+
+  cloud.auth.onAuthStateChange(async (event, session) => {
+    if (session) {
+      currentUser = session.user;
+
+      if (!cloudReady) {
+        setTimeout(() => loadCloudData(), 0);
+      }
+    } else {
+      currentUser = null;
+      cloudReady = false;
+      showLogin();
+    }
+  });
+
+  initializeCloud();
+})();
+</script></html>
